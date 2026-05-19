@@ -1,11 +1,11 @@
 import makeWASocket, {
-  useMultiFileAuthState,
-  DisconnectReason
+  useMultiFileAuthState
 } from "@whiskeysockets/baileys";
 
 import pino from "pino";
 
 async function startBot() {
+
   const { state, saveCreds } =
     await useMultiFileAuthState("./session");
 
@@ -16,17 +16,20 @@ async function startBot() {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // 🔥 TON NUMÉRO ICI
   const phoneNumber = "243895412475";
 
   if (!sock.authState.creds.registered) {
-    const code = await sock.requestPairingCode(phoneNumber);
 
-    console.log("🔥 TON CODE DE CONNEXION :");
-    console.log(code);
+    const code =
+      await sock.requestPairingCode(phoneNumber);
+
+    console.log("================================");
+    console.log("🔥 CODE WHATSAPP :", code);
+    console.log("================================");
   }
 
   sock.ev.on("connection.update", ({ connection }) => {
+
     console.log("STATUS:", connection);
 
     if (connection === "open") {
