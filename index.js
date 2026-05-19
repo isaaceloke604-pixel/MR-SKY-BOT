@@ -1,43 +1,42 @@
-import makeWASocket, { useMultiFileAuthState } from "@whiskeysockets/baileys";
+import makeWASocket, { useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
 import pino from "pino";
 
 async function startBot() {
-    try {
-        const { state, saveCreds } = await useMultiFileAuthState("./session");
+    const { state, saveCreds } = await useMultiFileAuthState("./session");
 
-        const sock = makeWASocket({
-            auth: state,
-            printQRInTerminal: true,
-            logger: pino({ level: "silent" })
-        });
+    const sock = makeWASocket({
+        auth: state,
+        logger: pino({ level: "silent" })
+    });
 
-        sock.ev.on("creds.update", saveCreds);
+    sock.ev.on("creds.update", saveCreds);
 
-        sock.ev.on("messages.upsert", async ({ messages }) => {
-            const msg = messages[0];
-            if (!msg.message) return;
+    sock.ev.on("connection.update", (update) => {
+        const { connection, lastDisconnect, qr } = update;
 
-            const text =
-                msg.message.conversation ||
-                msg.message.extendedTextMessage?.text;
+        console.log("STATUS:", connection);
 
-            const from = msg.key.remoteJid;
+        // 👉 QR va s’afficher ici proprement
+        if (qr) {
+            console.log("SCAN QR 👇");
+            console.log(qr);
+        }
 
-            if (text === ".ping") {
-                await sock.sendMessage(from, { text: "🏓 MR SKY BOT ONLINE" });
-            }
+        if (connection === "open") {
+            console.log("🔥 BOT CONNECTÉ AVEC SUCCÈS");
+        }
 
-            if (text === ".menu") {
-                await sock.sendMessage(from, {
-                    text: "🤖 MR SKY BOT\n.ping\n.menu"
-                });
-            }
-        });
+        if (connection === "close") {
+            const shouldReconnect =
+                lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
 
-        console.log("MR SKY BOT STARTED ✅");
-    } catch (e) {
-        console.log("ERROR:", e);
-    }
+            console.log("RECONNECT:", shouldReconnect);
+
+            if (shouldReconnect) startBot();
+        }
+    });
+
+    console.log("BOT STARTING...");
 }
 
 startBot();
