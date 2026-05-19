@@ -1,42 +1,40 @@
-import makeWASocket, { useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
+import makeWASocket, {
+  useMultiFileAuthState,
+  DisconnectReason
+} from "@whiskeysockets/baileys";
+
 import pino from "pino";
 
 async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState("./session");
+  const { state, saveCreds } =
+    await useMultiFileAuthState("./session");
 
-    const sock = makeWASocket({
-        auth: state,
-        logger: pino({ level: "silent" })
-    });
+  const sock = makeWASocket({
+    auth: state,
+    logger: pino({ level: "silent" })
+  });
 
-    sock.ev.on("creds.update", saveCreds);
+  sock.ev.on("creds.update", saveCreds);
 
-    sock.ev.on("connection.update", (update) => {
-        const { connection, lastDisconnect, qr } = update;
+  // 🔥 TON NUMÉRO ICI
+  const phoneNumber = "243895412475";
 
-        console.log("STATUS:", connection);
+  if (!sock.authState.creds.registered) {
+    const code = await sock.requestPairingCode(phoneNumber);
 
-        // 👉 QR va s’afficher ici proprement
-        if (qr) {
-            console.log("SCAN QR 👇");
-            console.log(qr);
-        }
+    console.log("🔥 TON CODE DE CONNEXION :");
+    console.log(code);
+  }
 
-        if (connection === "open") {
-            console.log("🔥 BOT CONNECTÉ AVEC SUCCÈS");
-        }
+  sock.ev.on("connection.update", ({ connection }) => {
+    console.log("STATUS:", connection);
 
-        if (connection === "close") {
-            const shouldReconnect =
-                lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+    if (connection === "open") {
+      console.log("✅ BOT CONNECTÉ !");
+    }
+  });
 
-            console.log("RECONNECT:", shouldReconnect);
-
-            if (shouldReconnect) startBot();
-        }
-    });
-
-    console.log("BOT STARTING...");
+  console.log("🚀 BOT STARTED");
 }
 
 startBot();
